@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Шапка Профиля - Активный Слот</title>
+    <!-- Подключение Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Настройка кастомного синего цвета для Tailwind -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'custom-blue': '#0000FF', 
+            }
+          }
+        }
+      }
+    </script>
+    
+    <!-- Установка шрифта Inter и кастомного темного фона + СТИЛИ ДЛЯ TOAST И BOTTOM SHEET -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0F0F0F; /* Основной темный фон */
+            padding: 0;
+            margin: 0;
+            
+            /* --- CSS ДЛЯ ЗАПРЕТА КОПИРОВАНИЯ --- */
+            user-select: none; 
+            -webkit-user-select: none; 
+            -moz-user-select: none; 
+            -ms-user-select: none; 
+            /* ---------------------------------- */
+        }
+        /* Адаптивный контейнер для ограничения ширины и центрирования */
+        .content-container {
+            max-width: 960px; 
+            margin: 0 auto;
+        }
+        
+        /* Дополнительный блеск для кнопок при наведении */
+        .btn-hover-effect:hover svg {
+            transform: scale(1.05);
+            transition: transform 0.2s ease;
+        }
+
+        /* Анимация появления для кнопки */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        /* --- СТИЛИ ДЛЯ BOTTOM SHEET (С повышенной плавностью) --- */
+        .bottom-sheet-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s; 
+        }
+        .bottom-sheet-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .bottom-sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-width: 480px; 
+            margin: 0 auto;
+            background-color: #212121; 
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 50;
+            transform: translateY(100%);
+            /* Плавное замедление (Material deceleration) */
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 0 0 16px 0; 
+        }
+        .bottom-sheet.active {
+            transform: translateY(0);
+        }
+
+        /* --- СТИЛИ ДЛЯ TOAST NOTIFICATION --- */
+        /* Анимация появления сверху вниз */
+        @keyframes slideIn {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        /* Анимация исчезновения */
+        @keyframes fadeOut {
+            from {
+                transform: scale(1);
+                opacity: 1;
+            }
+            to {
+                transform: scale(0.95);
+                opacity: 0;
+            }
+        }
+        .toast-enter {
+            animation: slideIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+        .toast-leave {
+            animation: fadeOut 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white">
+
+    <!-- Контейнер для уведомлений (Фиксирован сверху по центру) -->
+    <div id="toast-container" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 flex flex-col items-center gap-3 w-full max-w-sm pointer-events-none px-4">
+        <!-- Сюда будут добавляться уведомления -->
+    </div>
+
+    <!-- Шапка Профиля -->
+    <header class="w-full bg-neutral-800/70 backdrop-blur-md px-4 py-6 sm:px-6 sm:py-8 rounded-b-3xl shadow-xl border-b border-neutral-700/50">
+        <!-- Контейнер для центрирования и левого выравнивания текста -->
+        <div class="content-container">
+            
+            <!-- ID добавлен для изменения текста через JS -->
+            <p id="status-text" class="text-xl font-bold text-white mb-2 text-left">
+                Нет подтверждённых слотов
+            </p>
+            
+            <h1 class="text-base font-normal text-gray-400 mb-0.5 text-left">
+                Иванов Иван
+            </h1>
+            
+            <p class="text-base font-normal text-gray-400 text-left">
+                +7 999 888-77-66
+            </p>
+
+            <!-- ИНФОРМАЦИОННОЕ ОКНО С ПРЕДУПРЕЖДЕНИЕМ -->
+            <div class="mt-4 p-3 flex items-start gap-3 bg-yellow-900/20 border border-yellow-600/30 rounded-2xl">
+                <!-- Иконка Восклицательный знак (Стильная) -->
+                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center mt-0.5">
+                    <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.346 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                
+                <!-- Текст предупреждения -->
+                <p class="text-sm font-medium text-yellow-100/90 leading-relaxed pt-1">
+                    Открой <span class="text-yellow-400">«Расписание»</span> и укажи, когда хочешь выполнять задачи. Потом дождись подтверждения слотов.
+                </p>
+            </div>
+            <!-- КОНЕЦ ИНФОРМАЦИОННОГО ОКНА -->
+
+            <!-- БЛОК КНОПОК -->
+            <div class="mt-5 flex gap-3 h-[52px]"> <!-- Фиксированная высота для выравнивания -->
+                
+                <!-- КНОПКА ЗАКРЫТИЯ (Квадрат слева) - Скрыта по умолчанию -->
+                <button id="close-slot-btn" onclick="showStopSlotConfirmation()" class="hidden w-[52px] h-full flex-shrink-0 border-2 border-custom-blue rounded-xl items-center justify-center text-white hover:bg-custom-blue/20 transition duration-150 active:scale-95 fade-in">
+                    <!-- Та же иконка молнии -->
+                    <svg class="w-6 h-6 text-custom-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </button>
+
+                <!-- ОСНОВНАЯ КНОПКА (Начать слот / Перейти к задачам) -->
+                <button id="main-action-btn" onclick="toggleSlot()" class="flex-1 bg-custom-blue text-white text-base font-semibold rounded-xl shadow-lg hover:bg-blue-700 transition duration-150 active:scale-[0.98] flex justify-center items-center gap-2">
+                    <span id="main-btn-text">Начать слот</span>
+                    <!-- Иконка молнии (будет заменена на стрелку через JS) -->
+                    <svg id="main-btn-icon" class="w-5 h-5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </button>
+            </div>
+            <!-- КОНЕЦ БЛОКА КНОПОК -->
+
+        </div>
+    </header>
+    <!-- Конец Шапки Профиля -->
+
+    <!-- Основной контент страницы -->
+    <main class="py-6">
+        <div class="content-container px-4 sm:px-6 space-y-3"> 
+
+            <!-- КНОПКА 1: "Расписание" -->
+            <button class="w-full group btn-hover-effect flex items-center justify-between p-3.5 bg-neutral-800/60 border border-neutral-700/40 rounded-2xl shadow-sm hover:bg-neutral-800 transition duration-200 active:scale-[0.99]">
+                <div class="flex items-center gap-4">
+                    <!-- Изящный контейнер иконки -->
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    
+                    <span class="text-[17px] font-medium text-gray-200">
+                        Расписание
+                    </span>
+                </div>
+                <!-- Тонкая стрелка -->
+                <svg class="w-5 h-5 text-neutral-500 group-hover:text-custom-blue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </button>
+            
+            <!-- КНОПКА 2: "Твои результаты" -->
+            <button class="w-full group btn-hover-effect flex items-center justify-between p-3.5 bg-neutral-800/60 border border-neutral-700/40 rounded-2xl shadow-sm hover:bg-neutral-800 transition duration-200 active:scale-[0.99]">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+
+                    <span class="text-[17px] font-medium text-gray-200">
+                        Твои результаты
+                    </span>
+                </div>
+                <svg class="w-5 h-5 text-neutral-500 group-hover:text-custom-blue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </button>
+
+            <!-- КНОПКА 3: "Настройки" -->
+            <button class="w-full group btn-hover-effect flex items-center justify-between p-3.5 bg-neutral-800/60 border border-neutral-700/40 rounded-2xl shadow-sm hover:bg-neutral-800 transition duration-200 active:scale-[0.99]">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+
+                    <span class="text-[17px] font-medium text-gray-200">
+                        Настройки
+                    </span>
+                </div>
+                <svg class="w-5 h-5 text-neutral-500 group-hover:text-custom-blue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </button>
+
+            <!-- КНОПКА 4: "Пригласи друга" -->
+            <button class="w-full group btn-hover-effect flex items-center justify-between p-3.5 bg-neutral-800/60 border border-neutral-700/40 rounded-2xl shadow-sm hover:bg-neutral-800 transition duration-200 active:scale-[0.99]">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                    </div>
+
+                    <span class="text-[17px] font-medium text-gray-200">
+                        Пригласи друга
+                    </span>
+                </div>
+                <svg class="w-5 h-5 text-neutral-500 group-hover:text-custom-blue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </button>
+
+            <!-- КНОПКА 5: "Написать в поддержку" -->
+            <button class="w-full group btn-hover-effect flex items-center justify-between p-3.5 bg-neutral-800/60 border border-neutral-700/40 rounded-2xl shadow-sm hover:bg-neutral-800 transition duration-200 active:scale-[0.99]">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                    </div>
+
+                    <span class="text-[17px] font-medium text-gray-200">
+                        Написать в поддержку
+                    </span>
+                </div>
+                <svg class="w-5 h-5 text-neutral-500 group-hover:text-custom-blue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </button>
+
+            <!-- КНОПКА 6: "Выйти из аккаунта" (Красный акцент) -->
+            <button onclick="showLogoutConfirmation()" class="w-full group btn-hover-effect flex items-center justify-start p-3.5 bg-neutral-800/60 border border-neutral-700/40 rounded-2xl shadow-sm hover:bg-red-900/10 hover:border-red-900/30 transition duration-200 active:scale-[0.99]">
+                <div class="flex items-center gap-4">
+                    <!-- Красная подложка -->
+                    <div class="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-red-500/20 transition-colors">
+                        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                    </div>
+
+                    <span class="text-[17px] font-medium text-red-400 group-hover:text-red-300 transition-colors">
+                        Выйти из аккаунта
+                    </span>
+                </div>
+            </button>
+            <!-- КОНЕЦ КНОПКИ 6 -->
+            
+        </div>
+    </main>
+    
+    <!-- ============================================== -->
+    <!-- БОТТОМ ШИТ (Bottom Sheet) ДЛЯ ДИНАМИЧЕСКОГО ПОДТВЕРЖДЕНИЯ -->
+    <!-- ============================================== -->
+
+    <!-- Наложение (Overlay) -->
+    <!-- Удаляем onclick, так как он будет установлен динамически в JS, чтобы избежать конфликтов -->
+    <div id="bottom-sheet-overlay" class="bottom-sheet-overlay"></div> 
+
+    <!-- Контейнер Bottom Sheet -->
+    <div id="bottom-sheet" class="bottom-sheet">
+        
+        <!-- Полоска (Handle Bar) - Поднята ближе к краю -->
+        <div class="flex justify-center my-3">
+            <div class="w-10 h-1 bg-neutral-600 rounded-full"></div>
+        </div>
+
+        <!-- Контейнер контента Bottom Sheet. Используем px-4 для минимальных отступов -->
+        <div class="px-4"> 
+            
+            <!-- Заголовок и Кнопка Закрытия (Крестик) -->
+            <div class="flex justify-between items-start mb-4">
+                <!-- Заголовок (20px, жирный, по левому краю) -->
+                <h2 id="bsTitle" class="text-[20px] font-bold text-white pr-4"></h2>
+                
+                <!-- Кнопка Закрытия (Крестик) - Обновлена для вызова универсальной функции -->
+                <button onclick="hideBottomSheet()" class="text-neutral-400 hover:text-white transition p-1 flex-shrink-0 -mt-3 -mr-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Подзаголовок (Динамический ID) -->
+            <p id="bsSubtitle" class="text-base text-neutral-400 mb-8">
+            </p>
+
+            <!-- Кнопки Действий (Динамические ID и onclick) -->
+            <div class="flex flex-col gap-3">
+                <!-- Кнопка 1: Подтверждение (Фон) -->
+                <button id="bsConfirmBtn" class="text-white text-base font-semibold rounded-xl shadow-lg transition duration-150 active:scale-[0.99] py-3 px-4">
+                    <!-- Текст и класс будут установлены JS -->
+                </button>
+                
+                <!-- Кнопка 2: Отмена (Рамка) - Обновлена для вызова универсальной функции -->
+                <button id="bsCancelBtn" onclick="hideBottomSheet()" class="text-base font-semibold rounded-xl transition duration-150 active:scale-[0.99] py-3 px-4">
+                    <!-- Текст и класс будут установлены JS -->
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript Логика -->
+    <script>
+        // Константы
+        const LOGOUT_URL = 'https://u8902054545-design.github.io/DarkCenter-Cloud-Auth/';
+        const BOTTOM_SHEET_ANIMATION_DURATION = 300; // 0.3 секунды, соответствует CSS
+
+        // Переменные элементов DOM
+        const statusText = document.getElementById('status-text');
+        const mainBtnText = document.getElementById('main-btn-text');
+        const closeSlotBtn = document.getElementById('close-slot-btn');
+        const mainBtnIcon = document.getElementById('main-btn-icon');
+        const mainBtnIconPath = mainBtnIcon.querySelector('path');
+        
+        // Элементы Bottom Sheet
+        const bottomSheet = document.getElementById('bottom-sheet');
+        const bottomSheetOverlay = document.getElementById('bottom-sheet-overlay');
+        const bsTitle = document.getElementById('bsTitle');
+        const bsSubtitle = document.getElementById('bsSubtitle');
+        const bsConfirmBtn = document.getElementById('bsConfirmBtn');
+        const bsCancelBtn = document.getElementById('bsCancelBtn');
+
+
+        // Элементы Toast
+        const toastContainer = document.getElementById('toast-container');
+
+        // Определяем пути для иконок
+        const lightningPathD = "M13 10V3L4 14h7v7l9-11h-7z"; // Путь молнии (исходный)
+        const arrowPathD = "M9 5l7 7-7 7"; // Путь стрелки вправо (для "Перейти к задачам")
+
+        let isSlotActive = false; // Состояние слота (по умолчанию закрыт)
+
+        // Присваиваем универсальный обработчик для закрытия при клике на оверлей
+        bottomSheetOverlay.onclick = hideBottomSheet;
+
+
+        // --- КОНФИГУРАЦИЯ TOAST ---
+        const toastConfig = {
+            info: {
+                // Иконка для уведомления "Информационное" (синий круг с перевернутым восклицательным знаком)
+                icon: `<svg class="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="12" fill="#3B82F6"/>
+                        <path d="M12 8H12.01" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 11V16" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                       </svg>`
+            }
+        };
+
+        /**
+         * Показывает всплывающее уведомление.
+         * @param {string} type - Тип уведомления (пока только 'info').
+         * @param {string} customText - Кастомный текст для отображения.
+         */
+        function showToast(type, customText) {
+            const data = toastConfig[type];
+            
+            // Создаем элемент уведомления
+            const toast = document.createElement('div');
+            
+            // Стили Tailwind
+            toast.className = `
+                toast-enter 
+                bg-white 
+                text-gray-900 
+                rounded-xl 
+                shadow-2xl 
+                flex 
+                items-center 
+                gap-3 
+                px-4 
+                py-3 
+                pr-8
+                min-w-[300px] 
+                pointer-events-auto
+                cursor-pointer
+                relative
+                border border-gray-100
+            `;
+
+            // HTML структура уведомления
+            toast.innerHTML = `
+                ${data.icon}
+                <span class="font-medium text-sm select-none">${customText}</span>
+            `;
+
+            // Добавляем в контейнер
+            toastContainer.appendChild(toast);
+
+            // Обработчик удаления
+            const removeToast = () => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-leave');
+                
+                // Ждем окончания анимации перед полным удалением из DOM
+                toast.addEventListener('animationend', () => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                });
+            };
+
+            // Удалить при клике на само уведомление
+            toast.addEventListener('click', removeToast);
+
+            // Автоматическое удаление через 3 секунды
+            setTimeout(removeToast, 3000);
+        }
+
+        // --- ЛОГИКА BOTTOM SHEET (Универсальная) ---
+
+        // Показать Bottom Sheet
+        function showBottomSheet() {
+            bottomSheetOverlay.classList.add('active');
+            bottomSheet.classList.add('active');
+        }
+
+        // Скрыть Bottom Sheet
+        function hideBottomSheet() {
+            bottomSheetOverlay.classList.remove('active');
+            bottomSheet.classList.remove('active');
+        }
+
+
+        // --- ЛОГИКА ПОДТВЕРЖДЕНИЯ ЗАКРЫТИЯ СЛОТА ---
+
+        // Устанавливает контент для подтверждения закрытия слота
+        function showStopSlotConfirmation() {
+            if (!isSlotActive) return; // Защита от случайного вызова
+
+            bsTitle.innerText = "Завершить слот?";
+            bsSubtitle.innerText = "При закрытом слоте, выполнять задачи не получится";
+            
+            // Кнопка подтверждения
+            bsConfirmBtn.innerText = "Завершить";
+            bsConfirmBtn.onclick = confirmStopSlot;
+            bsConfirmBtn.className = "bg-custom-blue text-white text-base font-semibold rounded-xl shadow-lg hover:bg-blue-700 transition duration-150 active:scale-[0.99] py-3 px-4";
+
+            // Кнопка отмены
+            bsCancelBtn.innerText = "Не завершать";
+            bsCancelBtn.className = "border-2 border-custom-blue text-custom-blue text-base font-semibold rounded-xl hover:bg-blue-900/10 transition duration-150 active:scale-[0.99] py-3 px-4";
+            
+            showBottomSheet();
+        }
+
+        // Подтверждение завершения слота (вызывается из модального окна)
+        function confirmStopSlot() {
+            hideBottomSheet();
+            resetSlotState(); // Вызываем фактическую логику завершения
+        }
+
+
+        // --- ЛОГИКА ВЫХОДА ИЗ АККАУНТА (НОВАЯ ФУНКЦИЯ) ---
+        
+        // Устанавливает контент для подтверждения выхода из аккаунта
+        function showLogoutConfirmation() {
+            const subtitleOpen = "Изменённые настройки не сбросятся, активные задачи и слот сохранятся";
+            const subtitleClosed = "При следующей авторизации, придётся выбрать облачный центр снова";
+
+            bsTitle.innerText = "Выйти из аккаунта?";
+            bsSubtitle.innerText = isSlotActive ? subtitleOpen : subtitleClosed;
+            
+            // Кнопка подтверждения
+            bsConfirmBtn.innerText = "Выйти";
+            bsConfirmBtn.onclick = confirmLogout;
+            // Красная кнопка
+            bsConfirmBtn.className = "bg-red-600 text-white text-base font-semibold rounded-xl shadow-lg hover:bg-red-700 transition duration-150 active:scale-[0.99] py-3 px-4";
+
+            // Кнопка отмены
+            bsCancelBtn.innerText = "Не выходить";
+            // Синяя рамка и текст (#0000FF)
+            bsCancelBtn.className = "border-2 border-custom-blue text-custom-blue text-base font-semibold rounded-xl hover:bg-blue-900/10 transition duration-150 active:scale-[0.99] py-3 px-4";
+
+            showBottomSheet();
+        }
+
+        // Подтверждение выхода из аккаунта (теперь с задержкой)
+        function confirmLogout() {
+            // 1. Начинаем скрывать Bottom Sheet
+            hideBottomSheet();
+            
+            // 2. Ждем завершения анимации (300 мс) перед редиректом
+            setTimeout(() => {
+                window.location.href = LOGOUT_URL; 
+            }, BOTTOM_SHEET_ANIMATION_DURATION); 
+        }
+
+        // --- ОСНОВНАЯ ЛОГИКА СЛОТА ---
+
+        // Функция запуска/перехода к задачам (срабатывает при нажатии на синюю кнопку)
+        function toggleSlot() {
+            if (!isSlotActive) {
+                // Запуск слота
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+                isSlotActive = true;
+                
+                statusText.innerText = `Слот открыт в ${timeString}`;
+                mainBtnText.innerText = 'Перейти к задачам';
+                mainBtnIconPath.setAttribute('d', arrowPathD); // Меняем иконку на стрелку
+                
+                // Используем `border-custom-blue` для квадратной кнопки
+                closeSlotBtn.classList.remove('hidden');
+                closeSlotBtn.classList.add('flex');
+                
+                // --- НОВОЕ: Показать уведомление об открытии ---
+                showToast('info', `Слот открыт в ${timeString}`);
+
+            } else {
+                // Логика кнопки "Перейти к задачам". 
+                console.log("Переход к задачам...");
+            }
+        }
+
+        // Фактическая функция остановки слота (вызывается только после подтверждения)
+        function resetSlotState() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            
+            isSlotActive = false;
+            
+            // Возвращаем исходный текст заголовка
+            statusText.innerText = 'Нет подтверждённых слотов';
+            
+            // Возвращаем исходный текст кнопки "Начать слот"
+            mainBtnText.innerText = 'Начать слот';
+
+            // Меняем иконку обратно на молнию
+            mainBtnIconPath.setAttribute('d', lightningPathD); 
+            
+            // Скрываем квадратную кнопку
+            closeSlotBtn.classList.add('hidden');
+            closeSlotBtn.classList.remove('flex');
+            
+            // --- НОВОЕ: Показать уведомление о закрытии ---
+            showToast('info', `Слот закрыт в ${timeString}`);
+
+            console.log("Слот завершен.");
+        }
+
+        // Блокировка контекстного меню и горячих клавиш (из вашего кода)
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        document.addEventListener('keydown', function(e) {
+            const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+            
+            if (e.key === 'F12' || (isCmdOrCtrl && e.key === 'c') || (isCmdOrCtrl && e.key === 'u') || (isCmdOrCtrl && e.shiftKey && e.key === 'i')) {
+                e.preventDefault();
+            }
+        });
+
+        // Инициализируем Bottom Sheet при загрузке, чтобы установить универсальную функцию закрытия
+        window.onload = () => {
+            // Устанавливаем универсальную функцию закрытия на крестик в Bottom Sheet
+            document.querySelector('#bottom-sheet button').onclick = hideBottomSheet;
+        };
+
+    </script>
+    
+</body>
+  </html>
